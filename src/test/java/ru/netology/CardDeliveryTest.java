@@ -11,6 +11,7 @@ import org.openqa.selenium.Keys;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -52,10 +53,10 @@ public class CardDeliveryTest {
 
         @Test
         void shouldCheckCityNameValidation() {
-            SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
             LocalDate date = LocalDate.now();
+            DateTimeFormatter formatters = DateTimeFormatter.ofPattern("dd.MM.yyyy");
             date = date.plusDays(5);
-            String planningDate = formatter.format(date);
+            String planningDate = formatters.format(date);
             Configuration.holdBrowserOpen = true;
             open("http:/localhost:9999/");
             $("[data-test-id = 'city'] input").setValue("Во");
