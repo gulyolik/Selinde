@@ -23,53 +23,43 @@ import static com.codeborne.selenide.Selenide.*;
 
 public class CardDeliveryTest {
 
-    public void planningDateGeneration(int plusDays) {
-        LocalDateTime dateTime = LocalDate.now().plusDays(plusDays).atTime(LocalTime.MIN);
-        ZonedDateTime zonedDateTime = ZonedDateTime.of(dateTime, ZoneId.systemDefault());
-        String millis = Long.toString(zonedDateTime.toInstant().toEpochMilli());
-
-        final ElementsCollection days = $$x("//*[@data-day]");
-        final SelenideElement dateInput = $x("//*[@data-test-id = 'date']//input");
-        final SelenideElement nextMonthButton = $x("//*[data-step = '1']");
-
-
-        List<String> millisPerDay = new ArrayList<>();
-        List<String> tmp = new ArrayList<>();
-        for (SelenideElement element : days) {
-            millisPerDay.add(element.getAttribute("data-day"));
-        }
-
-        dateInput.click();
-        while (!millisPerDay.contains(millis)) {
-            nextMonthButton.click();
-            for (SelenideElement element : days) {
-                tmp.add(element.getAttribute("data-day"));
-                millisPerDay = tmp;
-            }
-        }
-        days.findBy(Condition.attribute("data-day", millis)).click();
+    public String generateDate(long addDays, String pattern) {
+        return LocalDate.now().plusDays(addDays).format(DateTimeFormatter.ofPattern(pattern));
     }
 
 
-    @Test
+    public void planningDateGeneration(int plusDays) {
+        LocalDate selectedDate = LocalDate.now().plusDays(3);
+        LocalDate requiredDate = LocalDate.now().plusDays(plusDays);
+
+        int deltaMonths = (requiredDate.getYear() - selectedDate.getYear()) * 12 +
+                (requiredDate.getMonthValue() - selectedDate.getMonthValue());
+
+        for (int i = 0; i < deltaMonths; i++)
+            $(".popup [data-step='1']").click();
+
+        $$(".popup_visible .calendar__layout td")
+                .findBy(text(generateDate(plusDays, "d"))).click();
+    }
+
+
+     @Test
     void shouldCheckCityNameValidation() {
-        LocalDate date = LocalDate.now();
-        DateTimeFormatter formatters = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-        date = date.plusDays(5);
-        String planningDate = formatters.format(date);
         Configuration.holdBrowserOpen = true;
         open("http:/localhost:9999/");
-        $("[data-test-id = 'city'] input").setValue("Во");
-        $x("//*[contains(text(),'Вологда')]").click();
+        $("[data-test-id = 'city'] input").sendKeys((Keys.CONTROL + "A"), Keys.DELETE);
+        $("[data-test-id = 'city'] input").setValue("Вологда");
         $("[data-test-id = 'date'] input").sendKeys((Keys.CONTROL + "A"), Keys.DELETE);
-        $("[data-test-id = 'date'] input").setValue(planningDate);
-        $(By.className("icon-button__content")).click();
-        $x("//*[contains(text(), '25')]").click();
+        $("[data-test-id = 'date'] input").setValue(generateDate(5, "dd.MM.yyyy"));
         $("[data-test-id = 'name'] input").setValue("Гуляева Ольга");
         $("[data-test-id = 'phone'] input").setValue("+79967737496");
         $(By.className("checkbox__box")).click();
         $x("//*[contains(text(), 'Забронировать')]").click();
-        $("[data-test-id = 'notification']").should(appear, Duration.ofSeconds(12)).shouldBe(visible);
+        $("[data-test-id = 'notification'] .notification__title")
+                .shouldBe(visible, Duration.ofSeconds(12)).shouldHave(exactText("Успешно!"));
+        $("[data-test-id = 'notification'] .notification__content")
+                .shouldBe(visible, Duration.ofSeconds(12))
+                .shouldHave(exactText("Встреча успешно забронирована на " + generateDate(5, "dd.MM.yyyy")));
     }
 
     @Test
@@ -80,12 +70,16 @@ public class CardDeliveryTest {
         $("[data-test-id = 'city'] input").setValue("Вол");
         $x("//*[contains(text(),'Вологда')]").click();
         $(By.className("icon-button__content")).click();
-        this.planningDateGeneration(5);
+        this.planningDateGeneration(7);
         $("[data-test-id = 'name'] input").setValue("Гуляева Ольга");
         $("[data-test-id = 'phone'] input").setValue("+79967737496");
         $(By.className("checkbox__box")).click();
         $x("//*[contains(text(), 'Забронировать')]").click();
-        $("[data-test-id = 'notification']").should(appear, Duration.ofSeconds(12)).shouldBe(visible);
+        $("[data-test-id = 'notification'] .notification__title")
+                .shouldBe(visible, Duration.ofSeconds(12)).shouldHave(exactText("Успешно!"));
+        $("[data-test-id = 'notification'] .notification__content")
+                .shouldBe(visible, Duration.ofSeconds(12))
+                .shouldHave(exactText("Встреча успешно забронирована на "  + generateDate(7,"dd.MM.yyyy")));
     }
 
 }
